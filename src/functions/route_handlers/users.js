@@ -1,10 +1,13 @@
-//jshint esversion:6
+const dotenv = require('dotenv').config();
 const firebase = require('firebase');
-const { db } = require('../util/init');
+// require('firebase/storage');
+// const storage = require('@google-cloud/storage');
+const { db, admin } = require('../util/init');
 const { validateSignupData, validateLoginData } = require('../util/validators');
 
 // Signup route handler
 exports.signup = (req, res) => {
+  // TODO: Add an admin field
   const newUser = {
     email: req.body.email,
     password: req.body.password,
@@ -17,6 +20,7 @@ exports.signup = (req, res) => {
     return res.status(400).json(errors);
 
   let token, userID;
+  const noImg = 'no-img.png';
 
   db.doc(`/users/${newUser.handle}`).get()
   .then(doc => {
@@ -36,6 +40,7 @@ exports.signup = (req, res) => {
       handle: newUser.handle,
       email: newUser.email,
       createdAt: new Date().toISOString(),
+      imageURL: `https://firebasestorage.googleapis.com/v0/b/${process.env.STORAGE_BUCKET}/o/${noImg}?alt=media`,
       userID
     };
     return db.doc(`/users/${newUser.handle}`).set(userCredentials);
@@ -81,4 +86,46 @@ exports.login = (req, res) => {
       return res.status(500).json({ errors: err.code });
     }
   });
+};
+
+// Route for profile image upload
+exports.uploadImage = (req, res) => {
+  const BusBoy = require('busboy');
+  const path = require('path');
+  const os = require('os');
+  const fs = require('fs');
+
+  const busboy = new BusBoy({ headers: req.headers });
+  let imageFileName;
+  let imageToBeUploaded = {};
+
+  busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
+    const imageExtension = filename.split('.').pop();
+    imageFileName = `${Math.round(Math.random() * 10000000000)}.${imageExtension}`;
+    const filepath = path.join(os.tmpdir(), imageFileName);
+    imageToBeUploaded = {filepath, mimetype};
+    file.pipe(fs.createWriteStream(filepath));
+    busboy.on('finish', () => {
+      admin.storage().bucket().upload(imageToBeUploaded.filepath, {
+        resumable: false,
+        metadata: {
+          metadata: {
+            contentType: imageToBeUploaded.mimetype
+          }
+        }
+      })
+      .then(() => {
+        const imageURL = `https://firebasestorage.googleapis.com/v0/b/${process.env.STORAGE_BUCKET}/o/${imageFileName}?alt=media`;
+        return db.doc(`/users/${req.user.handle}`).update({ imageURL });
+      })
+      .then(() => {
+        return res.json({ message: 'Image uploaded successfully' });
+      })
+      .catch(err => {
+        console.error(err);
+        res.status(500).json({ error: err.code });
+      });
+    });
+  });
+  busboy.end(req.rawBody);
 };

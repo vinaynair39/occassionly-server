@@ -1,5 +1,3 @@
-//jshint esversion:6
-
 // Helper Functions
 const isEmpty = (string) => {
   if(string.trim() === '') return true;
@@ -60,4 +58,21 @@ exports.validateLoginData = (data) => {
     errors,
     valid: Object.keys(errors).length === 0
   };
+};
+
+exports.validateEventData = (data) => {
+  let errors = {};
+
+  // Event name cannot be left empty
+  if(isEmpty(data.eventName))
+    errors.eventName = 'Must not be empty';
+
+  // Event location cannot be left empty
+  if(isEmpty(data.location))
+    errors.location = 'Must not be empty';
+
+  return {
+    errors,
+    valid: Object.keys(errors).length === 0
+  }
 };
