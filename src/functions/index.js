@@ -1,6 +1,11 @@
 const functions = require("firebase-functions");
 const app = require("express")(); // Initialize express app
-const { signup, login, uploadImage } = require("./route_handlers/users"); // Import user route handlers
+const {
+  signup,
+  login,
+  uploadImage,
+  addUserDetails
+} = require("./route_handlers/users"); // Import user route handlers
 const {
   createEvent,
   getEvent,
@@ -14,6 +19,7 @@ const { auth, checkAdmin } = require("./util/authentication"); // Import authent
 app.post("/signup", signup); // Signup to the website
 app.post("/login", login); // Login to the website
 app.post("/user/image", auth, uploadImage); // Upload profile image
+app.post("/user", auth, addUserDetails); // Add all the other user details
 
 // Event generation/management routes
 app.post("/event/create", auth, checkAdmin, createEvent); // Create an event

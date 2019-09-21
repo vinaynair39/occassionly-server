@@ -26,6 +26,7 @@ exports.auth = (req, res, next) => {
     .then(data => {
       req.user.handle = data.docs[0].data().handle;
       req.user.isAdmin = data.docs[0].data().isAdmin;
+      req.user.addedDetails = data.docs[0].data().contact_no ? true : false;
       return next();
     })
     .catch(err => {

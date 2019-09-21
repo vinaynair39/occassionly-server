@@ -3,13 +3,22 @@ const firebase = require("firebase");
 // require('firebase/storage');
 // const storage = require('@google-cloud/storage');
 const { db, admin } = require("../util/init");
-const { validateSignupData, validateLoginData } = require("../util/validators");
+const {
+  validateSignupData,
+  validateLoginData,
+  validateUserData
+} = require("../util/validators");
 
 // Signup route handler
 exports.signup = (req, res) => {
   // TODO: Add an admin field
   const newUser = {
+    name: null,
+    college: null,
+    year: null,
+    contact_no: null,
     email: req.body.email,
+    isCSIMember: null, // CSI RAIT only
     password: req.body.password,
     confirmPassword: req.body.confirmPassword,
     handle: req.body.handle,
@@ -91,6 +100,32 @@ exports.login = (req, res) => {
       } else {
         return res.status(500).json({ errors: err.code });
       }
+    });
+};
+
+exports.addUserDetails = (req, res) => {
+  let userDetails = {
+    name: req.body.name,
+    college: req.body.college,
+    year: req.body.year,
+    contact_no: req.body.contact_no,
+    isCSIMember: req.body.isCSIMember // Default value should be false, if user does not enter anything
+    // Keep the isCSIMember field as a checkbox, default value false lul
+  };
+
+  // Validate the user details
+  const { valid, errors } = validateUserData(userDetails);
+  if (!valid) return res.status(400).json(errors);
+
+  // Update user details
+  db.doc(`/users/${req.user.handle}`)
+    .update(userDetails)
+    .then(() => {
+      return res.json({ message: "Details updated successfully" });
+    })
+    .catch(err => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
     });
 };
 

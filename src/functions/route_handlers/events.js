@@ -9,6 +9,7 @@ exports.createEvent = (req, res) => {
     tags: req.body.tags,
     date: req.body.date,
     time: req.body.time,
+    fee: req.bdoy.fee,
     members: {} // Temporary, will change this later to accomodate actual users that register for the event
   };
 
@@ -62,6 +63,14 @@ exports.getEvent = (req, res) => {
 
 // Register user for an event
 exports.register = (req, res) => {
+  // If the user has not entered the required details, they cannot register for events
+  if (!req.user.addedDetails)
+    return res.status(403).json({
+      error:
+        "User must add required details to the profile before registering for any event"
+    });
+
+  // Add user handle to the members object
   db.doc(`/events/${req.params.eventID}`)
     .get()
     .then(doc => {
@@ -90,6 +99,7 @@ exports.register = (req, res) => {
 
 // Unregister user from an event
 exports.unregister = (req, res) => {
+  // Deletes user handle from the members object
   db.doc(`/events/${req.params.eventID}`)
     .get()
     .then(doc => {
