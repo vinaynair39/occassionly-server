@@ -26,7 +26,7 @@ exports.auth = (req, res, next) => {
     .then(data => {
       req.user.handle = data.docs[0].data().handle;
       req.user.isAdmin = data.docs[0].data().isAdmin;
-      req.user.addedDetails = data.docs[0].data().contact_no ? true : false;
+      req.user.addedDetails = data.docs[0].data().contact_no ? true : false; // true if user has added the details to their profile
       return next();
     })
     .catch(err => {

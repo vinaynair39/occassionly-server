@@ -11,7 +11,6 @@ const {
 
 // Signup route handler
 exports.signup = (req, res) => {
-  // TODO: Add an admin field
   const newUser = {
     name: null,
     college: null,

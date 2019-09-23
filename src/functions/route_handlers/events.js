@@ -9,7 +9,8 @@ exports.createEvent = (req, res) => {
     tags: req.body.tags,
     date: req.body.date,
     time: req.body.time,
-    fee: req.bdoy.fee,
+    fee: req.body.fee,
+    createdAt: new Date().toISOString(),
     members: {} // Temporary, will change this later to accomodate actual users that register for the event
   };
 
@@ -54,6 +55,26 @@ exports.getEvent = (req, res) => {
       } else {
         return res.json(doc.data());
       }
+    })
+    .catch(err => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
+    });
+};
+
+exports.getAllEvents = (req, res) => {
+  db.collection("events")
+    .orderBy("createdAt", "desc")
+    .get()
+    .then(snapshot => {
+      let events = [];
+      snapshot.docs.forEach(doc => {
+        events.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      return res.send(events);
     })
     .catch(err => {
       console.error(err);
