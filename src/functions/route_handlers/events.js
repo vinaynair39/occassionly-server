@@ -5,6 +5,7 @@ const { validateEventData } = require("../util/validators");
 exports.createEvent = (req, res) => {
   const newEvent = {
     eventName: req.body.eventName,
+    description: req.body.description,
     location: req.body.location,
     tags: req.body.tags,
     date: req.body.date,

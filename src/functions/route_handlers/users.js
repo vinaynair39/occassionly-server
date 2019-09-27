@@ -92,7 +92,11 @@ exports.login = (req, res) => {
     })
     .catch(err => {
       console.error(err);
-      if (err.code === "auth/wrong-password") {
+      if (err.code === "auth/user-not-found") {
+        return res
+          .status(403)
+          .json({ general: "Account not found. Sign up first!" });
+      } else if (err.code === "auth/wrong-password") {
         return res
           .status(400)
           .json({ general: "Incorrect credentials entered" });
