@@ -14,6 +14,7 @@ const {
   unregister
 } = require("./route_handlers/events"); // Import event route handlers
 const { auth, checkAdmin } = require("./util/authentication"); // Import authentication middleware
+const fileParser = require('express-multipart-file-parser'); // Middleware which seperated json data and Images
 
 // TODO: Verify users after signup, probably using email verification. Any other ideas are welcome too though
 // User Authentication Routes
@@ -24,7 +25,7 @@ app.post("/user", auth, addUserDetails); // Add all the other user details
 
 // TODO: Make provision to upload images for every event
 // Event generation/management routes
-app.post("/event/create", auth, checkAdmin, createEvent); // Create an event
+app.post("/event/create", auth, fileParser, checkAdmin, createEvent); // Create an event
 app.get("/event/:eventID", auth, getEvent); // Get event details
 app.get("/events", auth, getAllEvents); // Get all events
 app.post("/event/:eventID/register", auth, register); // Register for an event
