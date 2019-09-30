@@ -1,6 +1,6 @@
-const { db } = require("../util/init");
+const { db, admin, firebaseConfig} = require("../util/init");
 const { validateEventData } = require("../util/validators");
-
+const uuid = require('uuid');
 // Create an event
 exports.createEvent = (req, res) => {
 
@@ -52,10 +52,13 @@ exports.createEvent = (req, res) => {
           eventName: req.body.eventName,
           description: req.body.description,
           location: req.body.location,
+          userHandle: req.user.handle,
           tags: req.body.tags,
-          date: req.body.date,
+          startDate: req.body.startDate,
+          endDate: req.body.endDate,
           time: req.body.time,
           fee: req.body.fee,
+          imageUrl: imageUrl,
           createdAt: new Date().toISOString(),
           members: {} // Temporary, will change this later to accomodate actual users that register for the event
         };

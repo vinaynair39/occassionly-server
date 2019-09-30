@@ -24,4 +24,4 @@ admin.initializeApp({
   storageBucket: process.env.STORAGE_BUCKET
 });
 
-module.exports = { admin, db };
+module.exports = { admin, db, firebaseConfig };
