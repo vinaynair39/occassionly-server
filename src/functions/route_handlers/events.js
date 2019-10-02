@@ -53,10 +53,10 @@ exports.createEvent = (req, res) => {
           description: req.body.description,
           location: req.body.location,
           userHandle: req.user.handle,
-          tags: req.body.tags,
           startDate: req.body.startDate,
           endDate: req.body.endDate,
-          time: req.body.time,
+          startTime: req.body.startTime,
+          endTime: req.body.endTime,
           fee: req.body.fee,
           imageUrl: imageUrl,
           createdAt: new Date().toISOString(),
@@ -67,8 +67,8 @@ exports.createEvent = (req, res) => {
         if (!valid) return res.status(400).json(errors);
         return db.collection("events")
           .where("location", "==", newEvent.location)
-          .where("date", "==", newEvent.date)
-          .where("time", "==", newEvent.time)
+          .where("date", "==", newEvent.startDate)
+          .where("time", "==", newEvent.startTime)
           .get();
         }).then(doc => {
           if (doc.exists) {
