@@ -112,8 +112,8 @@ exports.addUserDetails = (req, res) => {
     college: req.body.college,
     year: req.body.year,
     contact_no: req.body.contact_no,
-    isCSIMember: req.body.isCSIMember // Default value should be false, if user does not enter anything
-    // Keep the isCSIMember field as a checkbox, default value false lul
+    discount: req.body.discount // Default value should be false, if user does not enter anything
+    // Keep the discount field as a checkbox, default value false lul
   };
 
   // Validate the user details

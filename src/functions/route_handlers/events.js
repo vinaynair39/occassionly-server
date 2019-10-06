@@ -1,38 +1,33 @@
-const { db, admin, firebaseConfig} = require("../util/init");
+const { db, admin, firebaseConfig } = require("../util/init");
 const { validateEventData } = require("../util/validators");
-const uuid = require('uuid');
+const uuid = require("uuid");
+
 // Create an event
 exports.createEvent = (req, res) => {
-
-  //imports required for image upload
-  const path = require('path');
-  const os = require('os');
-  const fs = require('fs');
+  // Imports required for image upload
+  const path = require("path");
+  const os = require("os");
+  const fs = require("fs");
 
   let newEvent;
   let imageToBeUploaded = {};
   let imageFileName;
-  let newBlog = {};
 
-  const {
-    fieldname,
-    originalname,
-    encoding,
-    mimetype,
-    buffer,
-  } = req.files[0]
+  const { fieldname, originalname, encoding, mimetype, buffer } = req.files[0];
 
-  if (mimetype !== 'image/jpeg' && mimetype !== 'image/png') {
-    return res.status(400).json({ error: 'Wrong file type submitted' });
+  if (mimetype !== "image/jpeg" && mimetype !== "image/png") {
+    return res.status(400).json({ error: "Wrong file type submitted" });
   }
 
-  //computing a new name for the image
-  const imageExtension = originalname.split('.')[originalname.split('.').length - 1];
+  // Computing a new name for the image
+  const imageExtension = originalname.split(".")[
+    originalname.split(".").length - 1
+  ];
   imageFileName = `${uuid()}.${imageExtension}`;
   const filepath = path.join(os.tmpdir(), imageFileName);
   imageToBeUploaded = { filepath, mimetype };
-  fs.writeFile(filepath, buffer, (err) => {
-  if(!err) console.log('Data written');
+  fs.writeFile(filepath, buffer, err => {
+    if (!err) console.log("Data written");
   });
   admin
     .storage()
@@ -44,56 +39,56 @@ exports.createEvent = (req, res) => {
           contentType: imageToBeUploaded.mimetype
         }
       }
-  }).then(() => {
-        imageUrl = `https://firebasestorage.googleapis.com/v0/b/${
-        firebaseConfig.storageBucket
-        }/o/${imageFileName}?alt=media`;
-        newEvent = {
-          eventName: req.body.eventName,
-          description: req.body.description,
-          location: req.body.location,
-          userHandle: req.user.handle,
-          startDate: req.body.startDate,
-          endDate: req.body.endDate,
-          startTime: req.body.startTime,
-          endTime: req.body.endTime,
-          fee: req.body.fee,
-          imageUrl: imageUrl,
-          createdAt: new Date().toISOString(),
-          members: {} // Temporary, will change this later to accomodate actual users that register for the event
-        };
-          // Validating incoming form data
-        const { valid, errors } = validateEventData(newEvent);
-        if (!valid) return res.status(400).json(errors);
-        return db.collection("events")
-          .where("location", "==", newEvent.location)
-          .where("date", "==", newEvent.startDate)
-          .where("time", "==", newEvent.startTime)
-          .get();
-        }).then(doc => {
-          if (doc.exists) {
-            return res.status(400).json({
-              error: "Event already exists"
-            });
-          } else {
-            return db.collection("events").add(newEvent);
-          }
-        })
-        .then(doc => {
-          return res.json({
-            ...newEvent,
-            id: doc.id
-            });
-          })
-        .catch(err => {
-          console.error(err);
-          return res.status(500).json({
-            error: err.code
-          });
+    })
+    .then(() => {
+      let imageUrl = `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/${imageFileName}?alt=media`;
+      newEvent = {
+        eventName: req.body.eventName,
+        description: req.body.description,
+        location: req.body.location,
+        userHandle: req.user.handle,
+        startDate: req.body.startDate,
+        endDate: req.body.endDate,
+        startTime: req.body.startTime,
+        endTime: req.body.endTime,
+        fee: req.body.fee,
+        imageUrl: imageUrl,
+        createdAt: new Date().toISOString(),
+        likeCount: 0,
+        members: {} // Temporary, will change this later to accomodate actual users that register for the event
+      };
+      // Validating incoming form data
+      const { valid, errors } = validateEventData(newEvent);
+      if (!valid) return res.status(400).json(errors);
+      return db
+        .collection("events")
+        .where("location", "==", newEvent.location)
+        .where("date", "==", newEvent.startDate)
+        .where("time", "==", newEvent.startTime)
+        .get();
+    })
+    .then(doc => {
+      if (doc.exists) {
+        return res.status(400).json({
+          error: "Event already exists"
         });
-    };
-
-
+      } else {
+        return db.collection("events").add(newEvent);
+      }
+    })
+    .then(doc => {
+      return res.json({
+        ...newEvent,
+        id: doc.id
+      });
+    })
+    .catch(err => {
+      console.error(err);
+      return res.status(500).json({
+        error: err.code
+      });
+    });
+};
 
 // Get event details
 exports.getEvent = (req, res) => {
@@ -197,5 +192,116 @@ exports.unregister = (req, res) => {
     });
 };
 
-// TODO: Make route handler to like event
-// TODO: Make route handler to unlike event
+// Like an event
+exports.likeEvent = (req, res) => {
+  const likeDocument = db
+    .collection("likes")
+    .where("userHandle", "==", req.user.handle)
+    .where("eventID", "==", req.params.eventID)
+    .limit(1);
+
+  const eventDocument = db.doc(`/events/${req.params.eventID}`);
+
+  let eventData;
+  eventDocument
+    .get()
+    .then(doc => {
+      if (doc.exists) {
+        eventData = doc.data();
+        eventData.eventID = doc.id;
+        return likeDocument.get();
+      } else {
+        return res.status(404).json({ error: "Event does not exist" });
+      }
+    })
+    .then(data => {
+      if (data.empty) {
+        return db
+          .collection("likes")
+          .add({
+            eventID: req.params.eventID,
+            userHandle: req.user.handle
+          })
+          .then(() => {
+            eventData.likeCount++;
+            return eventDocument.update({ likeCount: eventData.likeCount });
+          })
+          .then(() => {
+            return res.json(eventData);
+          });
+      } else {
+        return res.status(400).json({ error: "Event already liked" });
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      res.status(500).json({ error: err.code });
+    });
+};
+
+// Unlike an event
+exports.unlikeEvent = (req, res) => {
+  const likeDocument = db
+    .collection("likes")
+    .where("userHandle", "==", req.user.handle)
+    .where("eventID", "==", req.params.eventID)
+    .limit(1);
+
+  const eventDocument = db.doc(`/events/${req.params.eventID}`);
+
+  let eventData;
+  eventDocument
+    .get()
+    .then(doc => {
+      if (doc.exists) {
+        eventData = doc.data();
+        eventData.eventID = doc.id;
+        return likeDocument.get();
+      } else {
+        return res.status(404).json({ error: "Event does not exist" });
+      }
+    })
+    .then(data => {
+      if (data.empty) {
+        return res.status(400).json({ error: "Event not liked" });
+      } else {
+        return db
+          .doc(`/likes/${data.docs[0].id}`)
+          .delete()
+          .then(() => {
+            eventData.likeCount--;
+            return eventDocument.update({ likeCount: eventData.likeCount });
+          })
+          .then(() => {
+            return res.json(eventData);
+          });
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      res.status(500).json({ error: err.code });
+    });
+};
+
+// Cancel an event
+// TODO: Send a notification to all the members when the event gets cancelled
+// TODO: Delete all the likes associated with the event when the event gets cancelled
+exports.cancelEvent = (req, res) => {
+  const doc = db.doc(`/events/${req.params.eventID}`);
+  doc
+    .get()
+    .then(doc => {
+      if (!doc.exists) {
+        return res.status(404).json({ error: "Event not found" });
+      } else {
+        return doc.delete();
+      }
+    })
+    .then(() => {
+      return res.json({ message: "Event cancelled successfully" });
+    })
+    .catch(err => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
+    });
+};
