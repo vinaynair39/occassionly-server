@@ -212,12 +212,19 @@ exports.getAuthenticatedUser = (req, res) => {
           recipient: doc.data().recipient,
           sender: doc.data().sender,
           createdAt: doc.data().createdAt,
-          screamId: doc.data().screamId,
+          eventId: doc.data().eventId,
           type: doc.data().type,
           read: doc.data().read,
           notificationId: doc.id
         });
       });
+
+      return db.doc(`follows/${req.user.handle}`).get();
+      }).then(doc => {
+              userData.follows = {
+                followers:doc.data().followers,
+                following:doc.data().following
+              };
       return res.json(userData);
     })
     .catch(err => {
@@ -225,3 +232,34 @@ exports.getAuthenticatedUser = (req, res) => {
       return res.status(500).json({ error: err.code });
     });
 };
+
+
+exports.followUser = (req, res) => {
+  let batch = db.batch();
+  const recipient = req.body.recipient;
+  const sender = db.doc(`follows/${req.user.handle}`);
+  batch.update(sender, {following:admin.firestore.FieldValue.arrayUnion(recipient)});
+  const receiver = db.doc(`follows/${recipient}`);
+  batch.update(receiver, {followers:admin.firestore.FieldValue.arrayUnion(req.user.handle)});
+  return batch.commit().then(() => res.send('You started following ' + recipient + '!')
+  ).catch((err) => {
+    console.error(err);
+    return res.status(500).json({ error: err.code });
+  });
+}
+
+
+
+exports.unfollowUser = (req, res) => {
+  let batch = db.batch();
+  const recipient = req.body.recipient;
+  const sender = db.doc(`follows/${req.user.handle}`);
+  batch.update(sender, {following:admin.firestore.FieldValue.arrayRemove(recipient)});
+  const receiver = db.doc(`follows/${recipient}`);
+  batch.update(receiver, {followers:admin.firestore.FieldValue.arrayRemove(req.user.handle)});
+  return batch.commit().then(() => res.send('You unfollowed ' + recipient + '!')
+  ).catch((err) => {
+    console.error(err);
+    return res.status(500).json({ error: err.code });
+  });
+}

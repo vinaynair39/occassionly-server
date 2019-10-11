@@ -53,6 +53,7 @@ exports.createEvent = (req, res) => {
         endTime: req.body.endTime,
         fee: req.body.fee,
         imageUrl: imageUrl,
+        userImageUrl: req.user.userImage,
         createdAt: new Date().toISOString(),
         likeCount: 0,
         members: {} // Temporary, will change this later to accomodate actual users that register for the event
@@ -192,6 +193,21 @@ exports.unregister = (req, res) => {
     });
 };
 
+exports.checkLike = (req, res) => {
+  db.collection('likes').where('userHandle', '==', req.user.handle)
+  .where('eventID', '==', req.params.eventId).get().then(data => {
+    if(data.empty){
+      return res.send(false);
+    }
+    else{
+      return res.send(true);
+    }
+  }).catch((err) => {
+    console.error(err);
+    res.status(500).json({ error: err.code });
+  });
+}
+
 // Like an event
 exports.likeEvent = (req, res) => {
   const likeDocument = db
@@ -227,7 +243,7 @@ exports.likeEvent = (req, res) => {
             return eventDocument.update({ likeCount: eventData.likeCount });
           })
           .then(() => {
-            return res.json(eventData);
+            return res.send("Event Liked!");
           });
       } else {
         return res.status(400).json({ error: "Event already liked" });
@@ -273,7 +289,7 @@ exports.unlikeEvent = (req, res) => {
             return eventDocument.update({ likeCount: eventData.likeCount });
           })
           .then(() => {
-            return res.json(eventData);
+            return res.send('Event Unliked!');
           });
       }
     })

@@ -16,7 +16,8 @@ const {
   unregister,
   likeEvent,
   unlikeEvent,
-  cancelEvent
+  cancelEvent,
+  checkLike
 } = require("./route_handlers/events"); // Import event route handlers
 const { auth, checkAdmin } = require("./util/authentication"); // Import authentication middleware
 const fileParser = require("express-multipart-file-parser"); // Middleware which seperates json data and Images
@@ -36,8 +37,9 @@ app.get("/events", auth, getAllEvents); // Get all events
 app.delete("/event/:eventID/cancel", auth, checkAdmin, cancelEvent); // Cancel an event
 app.post("/event/:eventID/register", auth, register); // Register for an event
 app.post("/event/:eventID/unregister", auth, unregister); // Unregister from an event
-app.get("/event/:eventID/like", auth, likeEvent); // Like an event
-app.get("/event/:eventID/unlike", auth, unlikeEvent); // Unlike an event
+app.post("/event/:eventID/like", auth, likeEvent); // Like an event
+app.post("/event/:eventID/unlike", auth, unlikeEvent); // Unlike an event
+app.get('/event/:eventId/checkLike', auth, checkLike)
 
 exports.api = functions.https.onRequest(app);
 
