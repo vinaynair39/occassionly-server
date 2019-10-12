@@ -6,10 +6,12 @@ const {
   login,
   uploadImage,
   addUserDetails,
-  getAuthenticatedUser
+  getAuthenticatedUser,
+  getUserHandle
 } = require("./route_handlers/users"); // Import user route handlers
 const {
   createEvent,
+  editEvent,
   getEvent,
   getAllEvents,
   register,
@@ -17,7 +19,7 @@ const {
   likeEvent,
   unlikeEvent,
   cancelEvent,
-  checkLike
+  checkLike,
 } = require("./route_handlers/events"); // Import event route handlers
 const { auth, checkAdmin } = require("./util/authentication"); // Import authentication middleware
 const fileParser = require("express-multipart-file-parser"); // Middleware which seperates json data and Images
@@ -29,9 +31,11 @@ app.post("/login", login); // Login to the website
 app.post("/user/image", auth, uploadImage); // Upload profile image
 app.post("/user", auth, addUserDetails); // Add all the other user details
 app.get("/user/profile", auth, getAuthenticatedUser);
+app.get("/user/userHandle",auth, getUserHandle);
 
 // Event generation/management routes
 app.post("/event/create", auth, fileParser, checkAdmin, createEvent); // Create an event
+app.post('/event/:eventID/edit',auth, fileParser, editEvent);
 app.get("/event/:eventID", auth, getEvent); // Get event details
 app.get("/events", auth, getAllEvents); // Get all events
 app.delete("/event/:eventID/cancel", auth, checkAdmin, cancelEvent); // Cancel an event

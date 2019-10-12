@@ -12,7 +12,7 @@ const {
 // Signup route handler
 exports.signup = (req, res) => {
   const newUser = {
-    name: null,
+    name: req.body.name,
     college: null,
     year: null,
     contact_no: null,
@@ -54,7 +54,8 @@ exports.signup = (req, res) => {
         imageURL: `https://firebasestorage.googleapis.com/v0/b/${process.env.STORAGE_BUCKET}/o/${noImg}?alt=media`,
         userID
       };
-      return db.doc(`/users/${newUser.handle}`).set(userCredentials);
+      db.doc(`/follows/${newUser.userHandle}`).set({followers: [], following: []});
+      db.doc(`/users/${newUser.handle}`).set(userCredentials);
     })
     .then(() => {
       return res.status(201).json({ token });
@@ -232,6 +233,11 @@ exports.getAuthenticatedUser = (req, res) => {
       return res.status(500).json({ error: err.code });
     });
 };
+
+
+exports.getUserHandle = (req,res) => {
+    return res.send(req.user.handle);
+}
 
 
 exports.followUser = (req, res) => {

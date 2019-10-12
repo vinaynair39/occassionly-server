@@ -91,6 +91,69 @@ exports.createEvent = (req, res) => {
     });
 };
 
+exports.editEvent = (req,res) => {
+
+  if(!!req.files[0]){
+    const path = require("path");
+    const os = require("os");
+    const fs = require("fs");
+
+    let imageToBeUploaded = {};
+    let imageFileName;
+
+    const { fieldname, originalname, encoding, mimetype, buffer } = req.files[0];
+
+    if (mimetype !== "image/jpeg" && mimetype !== "image/png") {
+      return res.status(400).json({ error: "Wrong file type submitted" });
+    }
+
+    // Computing a new name for the image
+    const imageExtension = originalname.split(".")[
+      originalname.split(".").length - 1
+    ];
+    imageFileName = `${uuid()}.${imageExtension}`;
+    const filepath = path.join(os.tmpdir(), imageFileName);
+    imageToBeUploaded = { filepath, mimetype };
+    fs.writeFile(filepath, buffer, err => {
+      if (!err) console.log("Data written");
+    });
+    admin
+      .storage()
+      .bucket()
+      .upload(imageToBeUploaded.filepath, {
+        resumable: false,
+        metadata: {
+          metadata: {
+            contentType: imageToBeUploaded.mimetype
+          }
+        }
+      }).then(() => {
+        let imageUrl = `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/${imageFileName}?alt=media`;
+        // Validating incoming form data
+        return db.doc(`events/${req.params.eventID}`).update({
+          ...req.body,
+          imageUrl
+        })
+      }).then(()=>{
+            return res.json({message: 'details added successfully'})
+        }).catch(err => {
+            console.error(err);
+            return res.status(401).json({error: "something happened"})
+        })
+      }
+
+      else{
+          db.doc(`events/${req.params.eventID}`).update({
+          ...req.body
+        }).then(()=>{
+            return res.json({message: 'details added successfully'})
+        }).catch(err => {
+            console.error(err);
+            return res.status(401).json({error: "something happened"})
+        })
+      }
+}
+
 // Get event details
 exports.getEvent = (req, res) => {
   db.doc(`/events/${req.params.eventID}`)
