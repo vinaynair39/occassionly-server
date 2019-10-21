@@ -366,21 +366,21 @@ exports.unlikeEvent = (req, res) => {
 // TODO: Send a notification to all the members when the event gets cancelled
 // TODO: Delete all the likes associated with the event when the event gets cancelled
 exports.cancelEvent = (req, res) => {
-  const doc = db.doc(`/events/${req.params.eventID}`);
-  doc
-    .get()
-    .then(doc => {
-      if (!doc.exists) {
-        return res.status(404).json({ error: "Event not found" });
-      } else {
-        return doc.delete();
+  db.doc(`/events/${req.params.eventID}`).get().then(doc => {
+      if(doc.exists){
+          if(doc.data().userHandle === req.user.handle)
+              doc.ref.delete().then(() => {
+                  return res.status(200).json({success:`deleted ${doc.data().eventName}`});
+              })
+          else{
+              res.status(400).json({error: 'unauthorized'})
+          }
       }
-    })
-    .then(() => {
-      return res.json({ message: "Event cancelled successfully" });
-    })
-    .catch(err => {
+      else{
+          res.status(400).json({error: 'event doesnt exist'})
+      }
+  }).catch((err) => {
       console.error(err);
-      return res.status(500).json({ error: err.code });
-    });
+      res.status(500).json({ error: err.code });
+      });
 };
