@@ -92,7 +92,16 @@ exports.createEvent = (req, res) => {
 };
 
 exports.editEvent = (req,res) => {
-
+  const event = db.doc(`events/${req.params.eventID}`);
+  const updates = {};
+  if(req.body.eventName) updates.eventName = req.body.eventName;
+  if(req.body.description) updates.description =  req.body.description;
+  if(req.body.location ) updates.location = req.body.location;
+   if(req.body.startDate) updates.startDate = req.body.startDate;
+  if( req.body.endDate ) updates.endDate = req.body.endDate;
+  if(req.body.startTime)updates.startTime = req.body.startTime;
+  if( req.body.endTime )updates.endTime = req.body.endTime;
+  if(req.body.fee)updates.fee= req.body.fee;
   if(!!req.files[0]){
     const path = require("path");
     const os = require("os");
@@ -130,23 +139,26 @@ exports.editEvent = (req,res) => {
       }).then(() => {
         let imageUrl = `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/${imageFileName}?alt=media`;
         // Validating incoming form data
-        return db.doc(`events/${req.params.eventID}`).update({
-          ...req.body,
+
+        event.update({
+          ...updates,
           imageUrl
-        })
-      }).then(()=>{
-            return res.json({message: 'details added successfully'})
+        });
+        return event.get();
+      }).then((doc)=>{
+            return res.send(doc.data());
         }).catch(err => {
             console.error(err);
             return res.status(401).json({error: "something happened"})
         })
       }
-
       else{
-          db.doc(`events/${req.params.eventID}`).update({
-          ...req.body
+          event.update({
+          ...updates
         }).then(()=>{
-            return res.json({message: 'details added successfully'})
+          return event.get();
+        }).then(doc => {
+            return res.send(doc.data());
         }).catch(err => {
             console.error(err);
             return res.status(401).json({error: "something happened"})
