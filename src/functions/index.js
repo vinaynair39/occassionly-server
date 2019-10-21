@@ -1,13 +1,15 @@
 const functions = require("firebase-functions");
 const app = require("express")(); // Initialize express app
 const { db } = require("./util/init");
+const cors = require('cors');
 const {
   signup,
   login,
   uploadImage,
   addUserDetails,
   getAuthenticatedUser,
-  getUserHandle
+  getUserHandle,
+  getUserDetails,
 } = require("./route_handlers/users"); // Import user route handlers
 const {
   createEvent,
@@ -23,6 +25,7 @@ const {
 } = require("./route_handlers/events"); // Import event route handlers
 const { auth, checkAdmin } = require("./util/authentication"); // Import authentication middleware
 const fileParser = require("express-multipart-file-parser"); // Middleware which seperates json data and Images
+app.use(cors());
 
 // TODO: Verify users after signup, probably using email verification. Any other ideas are welcome too though
 // User Authentication Routes
@@ -31,8 +34,8 @@ app.post("/login", login); // Login to the website
 app.post("/user/image", auth, uploadImage); // Upload profile image
 app.post("/user", auth, addUserDetails); // Add all the other user details
 app.get("/user/profile", auth, getAuthenticatedUser);
-app.get("/user/userHandle",auth, getUserHandle);
-
+app.get("/user/:handle", getUserDetails);
+app.get("/userHandle", auth, getUserHandle);
 // Event generation/management routes
 app.post("/event/create", auth, fileParser, checkAdmin, createEvent); // Create an event
 app.post('/event/:eventID/edit',auth, fileParser, editEvent);

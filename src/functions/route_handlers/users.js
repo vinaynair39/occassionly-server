@@ -107,13 +107,15 @@ exports.login = (req, res) => {
     });
 };
 
+
+
 exports.addUserDetails = (req, res) => {
   let userDetails = {
     name: req.body.name,
     college: req.body.college,
     year: req.body.year,
     contact_no: req.body.contact_no,
-    discount: req.body.discount // Default value should be false, if user does not enter anything
+    // discount: req.body.discount // Default value should be false, if user does not enter anything
     // Keep the discount field as a checkbox, default value false lul
   };
 
@@ -142,6 +144,7 @@ exports.uploadImage = (req, res) => {
 
   const busboy = new BusBoy({ headers: req.headers });
   let imageFileName;
+  let imageURL = "";
   let imageToBeUploaded = {};
 
   busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
@@ -165,11 +168,11 @@ exports.uploadImage = (req, res) => {
           }
         })
         .then(() => {
-          const imageURL = `https://firebasestorage.googleapis.com/v0/b/${process.env.STORAGE_BUCKET}/o/${imageFileName}?alt=media`;
+          imageURL = `https://firebasestorage.googleapis.com/v0/b/${process.env.STORAGE_BUCKET}/o/${imageFileName}?alt=media`;
           return db.doc(`/users/${req.user.handle}`).update({ imageURL });
         })
         .then(() => {
-          return res.json({ message: "Image uploaded successfully" });
+          return res.send(imageUrl);
         })
         .catch(err => {
           console.error(err);
@@ -233,7 +236,35 @@ exports.getAuthenticatedUser = (req, res) => {
       return res.status(500).json({ error: err.code });
     });
 };
-
+exports.getUserDetails = (req, res) => {
+    let userData = {};
+    db.doc(`users/${req.params.handle}`).get().then((doc) => {
+        if(doc.exists){
+            userData.user = doc.data();
+            return db.collection(`events`).where('userHandle', '==', req.params.handle).orderBy('createdAt', 'desc').get();
+        }
+        else {
+            return res.status(404).json({ error: 'User not found' });
+        }
+    }).then((docs) => {
+        userData.events = [];
+        docs.forEach((doc => {
+            userData.events.push({
+                ...doc.data(),
+                eventId: doc.id
+            });
+        })
+      );
+        return db.doc(`follows/${req.params.handle}`).get();
+    }).then(doc => {
+        userData.follows = {};
+        userData.follows = doc.data();
+        return res.json(userData);
+    }).catch((err) => {
+        console.error(err);
+        return res.status(500).json({ error: err.code });
+      });
+};
 
 exports.getUserHandle = (req,res) => {
     return res.send(req.user.handle);
