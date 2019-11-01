@@ -54,8 +54,15 @@ exports.signup = (req, res) => {
         imageURL: `https://firebasestorage.googleapis.com/v0/b/${process.env.STORAGE_BUCKET}/o/${noImg}?alt=media`,
         userID
       };
-      db.doc(`/follows/${newUser.userHandle}`).set({followers: [], following: []});
+      db.doc(`/follows/${newUser.userHandle}`).set({
+        followers: [],
+        following: []
+      });
       db.doc(`/users/${newUser.handle}`).set(userCredentials);
+    })
+    .then(() => {
+      let user = firebase.auth().currentUser;
+      return user.sendEmailVerification();
     })
     .then(() => {
       return res.status(201).json({ token });
@@ -107,14 +114,12 @@ exports.login = (req, res) => {
     });
 };
 
-
-
 exports.addUserDetails = (req, res) => {
   let userDetails = {
     name: req.body.name,
     college: req.body.college,
     year: req.body.year,
-    contact_no: req.body.contact_no,
+    contact_no: req.body.contact_no
     // discount: req.body.discount // Default value should be false, if user does not enter anything
     // Keep the discount field as a checkbox, default value false lul
   };
@@ -224,11 +229,12 @@ exports.getAuthenticatedUser = (req, res) => {
       });
 
       return db.doc(`follows/${req.user.handle}`).get();
-      }).then(doc => {
-              userData.follows = {
-                followers:doc.data().followers,
-                following:doc.data().following
-              };
+    })
+    .then(doc => {
+      userData.follows = {
+        followers: doc.data().followers,
+        following: doc.data().following
+      };
       return res.json(userData);
     })
     .catch(err => {
@@ -237,83 +243,99 @@ exports.getAuthenticatedUser = (req, res) => {
     });
 };
 exports.getUserDetails = (req, res) => {
-    let userData = {};
-    db.doc(`users/${req.params.handle}`).get().then((doc) => {
-        if(doc.exists){
-            userData.user = doc.data();
-            return db.collection(`events`).where('userHandle', '==', req.params.handle).orderBy('createdAt', 'desc').get();
-        }
-        else {
-            return res.status(404).json({ error: 'User not found' });
-        }
-    }).then((docs) => {
-        userData.events = [];
-        docs.forEach((doc => {
-            userData.events.push({
-                ...doc.data(),
-                eventId: doc.id
-            });
-        })
-      );
-        return db.doc(`follows/${req.params.handle}`).get();
-    }).then(doc => {
-        userData.follows = {};
-        userData.follows = doc.data();
-        return res.json(userData);
-    }).catch((err) => {
-        console.error(err);
-        return res.status(500).json({ error: err.code });
+  let userData = {};
+  db.doc(`users/${req.params.handle}`)
+    .get()
+    .then(doc => {
+      if (doc.exists) {
+        userData.user = doc.data();
+        return db
+          .collection(`events`)
+          .where("userHandle", "==", req.params.handle)
+          .orderBy("createdAt", "desc")
+          .get();
+      } else {
+        return res.status(404).json({ error: "User not found" });
+      }
+    })
+    .then(docs => {
+      userData.events = [];
+      docs.forEach(doc => {
+        userData.events.push({
+          ...doc.data(),
+          eventId: doc.id
+        });
       });
+      return db.doc(`follows/${req.params.handle}`).get();
+    })
+    .then(doc => {
+      userData.follows = {};
+      userData.follows = doc.data();
+      return res.json(userData);
+    })
+    .catch(err => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
+    });
 };
 
-exports.getUserHandle = (req,res) => {
-    return res.send(req.user.handle);
-}
+exports.getUserHandle = (req, res) => {
+  return res.send(req.user.handle);
+};
 
 exports.markNotificationsRead = (req, res) => {
-    let batch = db.batch();
-    req.body.forEach((notificationId) => {
-      const notification = db.doc(`/notifications/${notificationId}`);
-      batch.update(notification, { read: true });
+  let batch = db.batch();
+  req.body.forEach(notificationId => {
+    const notification = db.doc(`/notifications/${notificationId}`);
+    batch.update(notification, { read: true });
+  });
+  batch
+    .commit()
+    .then(() => {
+      return res.json({ message: "Notifications marked read" });
+    })
+    .catch(err => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
     });
-    batch
-      .commit()
-      .then(() => {
-        return res.json({ message: 'Notifications marked read' });
-      })
-      .catch((err) => {
-        console.error(err);
-        return res.status(500).json({ error: err.code });
-      });
-  };
-
+};
 
 exports.followUser = (req, res) => {
   let batch = db.batch();
   const recipient = req.body.recipient;
   const sender = db.doc(`follows/${req.user.handle}`);
-  batch.update(sender, {following:admin.firestore.FieldValue.arrayUnion(recipient)});
-  const receiver = db.doc(`follows/${recipient}`);
-  batch.update(receiver, {followers:admin.firestore.FieldValue.arrayUnion(req.user.handle)});
-  return batch.commit().then(() => res.send('You started following ' + recipient + '!')
-  ).catch((err) => {
-    console.error(err);
-    return res.status(500).json({ error: err.code });
+  batch.update(sender, {
+    following: admin.firestore.FieldValue.arrayUnion(recipient)
   });
-}
-
-
+  const receiver = db.doc(`follows/${recipient}`);
+  batch.update(receiver, {
+    followers: admin.firestore.FieldValue.arrayUnion(req.user.handle)
+  });
+  return batch
+    .commit()
+    .then(() => res.send("You started following " + recipient + "!"))
+    .catch(err => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
+    });
+};
 
 exports.unfollowUser = (req, res) => {
   let batch = db.batch();
   const recipient = req.body.recipient;
   const sender = db.doc(`follows/${req.user.handle}`);
-  batch.update(sender, {following:admin.firestore.FieldValue.arrayRemove(recipient)});
-  const receiver = db.doc(`follows/${recipient}`);
-  batch.update(receiver, {followers:admin.firestore.FieldValue.arrayRemove(req.user.handle)});
-  return batch.commit().then(() => res.send('You unfollowed ' + recipient + '!')
-  ).catch((err) => {
-    console.error(err);
-    return res.status(500).json({ error: err.code });
+  batch.update(sender, {
+    following: admin.firestore.FieldValue.arrayRemove(recipient)
   });
-}
+  const receiver = db.doc(`follows/${recipient}`);
+  batch.update(receiver, {
+    followers: admin.firestore.FieldValue.arrayRemove(req.user.handle)
+  });
+  return batch
+    .commit()
+    .then(() => res.send("You unfollowed " + recipient + "!"))
+    .catch(err => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
+    });
+};
